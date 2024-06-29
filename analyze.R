@@ -937,217 +937,225 @@ coverageTableShowingSeededLine <- function(dt, maskId, anonymized, evodt, showIn
   
   
   TABLE = paste(GENERATED_FILES, "/coverage_manual_vs_evo",DATA_VERSION, "_" ,maskId,".tex", sep = "")
-  unlink(TABLE)
-  sink(TABLE, append = TRUE, split = TRUE)
-  
-  sutdt <- read.table(SUTINFO_DATA, header = T)
-  
-  cat("\\begin{tabular}{ ll rrr r rrr}\\\\ \n", sep = "")
-  cat("\\toprule \n")
-  cat("", "& &\\multicolumn{2}{c}{EETests} &   \\multicolumn{4}{c}{Base vs. EETests}   \\\\ \n", sep ="")
-  cat("SUT & Type &\\#Tests & Critical  & Relative\\% & \\multicolumn{3}{c}{Ratio of lines covered by} \\\\ \n")
-  cat("& &  &Line\\%  &  & EETests & Both  & Base  \\\\ \n", sep ="")
-  cat("\\midrule \n")
-  
-  existingprojects = sort(unique(dt$id))
-  projects = SUT_IDS[SUT_IDS %in% existingprojects]
-  
-  nprojects = length(projects)
-  
-  budgets = tbFilter(sort(unique(dt$maxTime)))
-  nbudgets = length(budgets)
-  
-  avgSeededLines = rep(0, nprojects * nbudgets)
-  avgLines = rep(0, nprojects * nbudgets)
-  avgCrLines = rep(0, nprojects * nbudgets)
-  
-  avgCrLinesByEvo = rep(0, nprojects * nbudgets)
-  
-  avgBranches = rep(0, nprojects * nbudgets)
-  avgFaults = rep(0, nprojects * nbudgets)
-  
-  onlyA <- rep(0, nprojects * nbudgets)
-  both <- rep(0, nprojects * nbudgets)
-  onlyB <- rep(0, nprojects * nbudgets)
-  
-  sumtests <- 0
-  
-  HighestLevel <- 50
-  MedianLevel <- 30
-  LowLevel <- 10
-  
-  for (i in 1:length(projects)) {
-    proj = projects[[i]]
-    
-    projectMask =  dt$id == proj
-    evo_projectMask = evodt$id == proj
-    
-    totLines = getTotalLines(proj)
-    totBranches = max(dt$numberOfBranches[projectMask])
-    
-    totCrLines = getTotalCRLines(proj)
-    
-    
-    for (j in 1:nbudgets) {
-      
-      BINDEX = (i-1)*nbudgets + j
-      
-      budget = budgets[[j]]
-      
-      if(j == 1){
-        cat(formatSUT(proj, anonymized))
-        
-        sutprojectMask = sutdt$Id == proj
-        label <- sutdt$Category[sutprojectMask]
-        cat(" &", label, sep = "")
-      }
-      
-      
-      
-      budgetMask = projectMask & dt$maxTime == budget
-      evo_budgetMask = evo_projectMask & evodt$maxTime == budget
-      
-      numtests = unique(dt$numberOfRPCSeededTests[budgetMask])
-      if(length(numtests)){
-        cat(" & ", numtests, sep = "")
-        sumtests <- sumtests + numtests 
-      }else{
-        stop(paste("mismatched number of seeded tests ",proj, sep = ""))
-      }
-      
-      seeddlines = dt$seedingTimeCoveredLines[budgetMask]
-      percent = 100 * (seeddlines / totLines)
-      avgSeededLines[[BINDEX]] = mean(percent)
-      #cat(" & ")
-      #cat(formatC(mean(percent), digits = 1, format = "f"),"", sep = "")
-      
-      
-      
-      crlines = dt$lineAndcovered[budgetMask]
-      percent = 100 * (crlines / totCrLines)
-      avgCrLines[[BINDEX]] = mean(percent)
-      cat(" & ")
-      cat(formatC(mean(percent), digits = 1, format = "f"),"", sep = "")
+    unlink(TABLE)
+    sink(TABLE, append = TRUE, split = TRUE)
 
-      
-      crlinesByEvo = evodt$lineAndcovered[evo_budgetMask]
-      percentByEvo = 100 * (crlinesByEvo / totCrLines)
-      additionalcrlines = (mean(percentByEvo) - mean(percent))/mean(percent) * 100
-      avgCrLinesByEvo[[BINDEX]] = additionalcrlines
-      prefixadditional <- ""
-      if(additionalcrlines > 0){
-        prefixadditional <- "+"
-      }
-      cat(" & ")
-      cat(prefixadditional,formatC(additionalcrlines, digits = 1, format = "f"),"", sep = "")
-      
-      
-      
-      # test during seeding pattern
-      patternA <- "coverageInfo_seeding_"
-      seedsA <- dt$seed[budgetMask]
+    sutdt <- read.table(SUTINFO_DATA, header = T)
 
-      patternB <- "coverageInfo_"
-      seedsB <- evodt$seed[evo_budgetMask]
-      
-      compareresults <- compareCoveredLines(patternA, seedsA, crlines, patternB, seedsB,crlinesByEvo, proj, showInvalid = showInvalid)
-      
-      
-      for (ri in 1:length(compareresults)) {
-        color_sign <- NULL
-        level <- NULL
-        r <- compareresults[ri]
-        if(ri == 1){
-          onlyA[[BINDEX]] = as.numeric(r) 
-          if(as.numeric(r) > as.numeric(compareresults[3])){
-            color_sign <- FALSE
+    cat("\\begin{tabular}{ ll rrr rrr}\\\\ \n", sep = "")
+    cat("\\toprule \n")
+    cat("", "& &\\multicolumn{3}{c}{EETests} &   \\multicolumn{3}{c}{Base vs. EETests}   \\\\ \n", sep ="")
+    cat("SUT & Type &\\#Tests & Critical  & Relative\\% & \\multicolumn{3}{c}{Ratio of lines covered by} \\\\ \n")
+    cat("& & (\\#Tests\\textsubscript{\\emph{m}}, $\\frac{\\#Tests_m}{\\#Tests}$) & Line\\%  &  & EETests & Both  & Base  \\\\ \n", sep ="")
+    cat("\\midrule \n")
+
+    existingprojects = sort(unique(dt$id))
+    projects = SUT_IDS[SUT_IDS %in% existingprojects]
+
+    nprojects = length(projects)
+
+    budgets = tbFilter(sort(unique(dt$maxTime)))
+    nbudgets = length(budgets)
+
+    avgSeededLines = rep(0, nprojects * nbudgets)
+    avgLines = rep(0, nprojects * nbudgets)
+    avgCrLines = rep(0, nprojects * nbudgets)
+
+    avgCrLinesByEvo = rep(0, nprojects * nbudgets)
+
+    avgBranches = rep(0, nprojects * nbudgets)
+    avgFaults = rep(0, nprojects * nbudgets)
+
+    onlyA <- rep(0, nprojects * nbudgets)
+    both <- rep(0, nprojects * nbudgets)
+    onlyB <- rep(0, nprojects * nbudgets)
+
+    sumtests <- 0
+    sumtestswithmock <- 0
+    sumratetestswithmock <- 0
+
+    HighestLevel <- 50
+    MedianLevel <- 30
+    LowLevel <- 10
+
+    for (i in 1:length(projects)) {
+      proj = projects[[i]]
+
+      projectMask =  dt$id == proj
+      evo_projectMask = evodt$id == proj
+
+      totLines = getTotalLines(proj)
+      totBranches = max(dt$numberOfBranches[projectMask])
+
+      totCrLines = getTotalCRLines(proj)
+
+
+      for (j in 1:nbudgets) {
+
+        BINDEX = (i-1)*nbudgets + j
+
+        budget = budgets[[j]]
+
+        if(j == 1){
+          cat(formatSUT(proj, anonymized))
+
+          sutprojectMask = sutdt$Id == proj
+          label <- sutdt$Category[sutprojectMask]
+          cat(" &", label, sep = "")
+        }
+
+
+
+        budgetMask = projectMask & dt$maxTime == budget
+        evo_budgetMask = evo_projectMask & evodt$maxTime == budget
+
+        #numtests = unique(dt$numberOfRPCSeededTests[budgetMask])
+        numtests = sutdt$SeededTests[sutdt$Id == proj]
+        if(length(numtests) == 1){
+          cat(" & ", numtests, sep = "")
+          sumtests <- sumtests + numtests
+        }else{
+          stop(paste("mismatched number of seeded tests ",proj, sep = ""))
+        }
+
+        numtestswithmock = sutdt$TestsRequiredMock[sutdt$Id == proj]
+        if(length(numtestswithmock) == 1){
+          cat(" (", numtestswithmock, ", ", formatC(100*numtestswithmock/numtests, digits = 1, format = "f"),"\\%)",sep = "")
+          sumtestswithmock <- sumtestswithmock + numtestswithmock
+          sumratetestswithmock <- sumratetestswithmock + 100*numtestswithmock/numtests
+        }else{
+          stop(paste("mismatched number of seeded tests ",proj, sep = ""))
+        }
+
+        seeddlines = dt$seedingTimeCoveredLines[budgetMask]
+        percent = 100 * (seeddlines / totLines)
+        avgSeededLines[[BINDEX]] = mean(percent)
+        #cat(" & ")
+        #cat(formatC(mean(percent), digits = 1, format = "f"),"", sep = "")
+
+
+
+        crlines = dt$lineAndcovered[budgetMask]
+        percent = 100 * (crlines / totCrLines)
+        avgCrLines[[BINDEX]] = mean(percent)
+        cat(" & ")
+        cat(formatC(mean(percent), digits = 1, format = "f"),"", sep = "")
+
+
+        crlinesByEvo = evodt$lineAndcovered[evo_budgetMask]
+        percentByEvo = 100 * (crlinesByEvo / totCrLines)
+        additionalcrlines = (mean(percentByEvo) - mean(percent))/mean(percent) * 100
+        avgCrLinesByEvo[[BINDEX]] = additionalcrlines
+        prefixadditional <- ""
+        if(additionalcrlines > 0){
+          prefixadditional <- "+"
+        }
+        cat(" & ")
+        cat(prefixadditional,formatC(additionalcrlines, digits = 1, format = "f"),"", sep = "")
+
+
+
+        # test during seeding pattern
+        patternA <- "coverageInfo_seeding_"
+        seedsA <- dt$seed[budgetMask]
+
+        patternB <- "coverageInfo_"
+        seedsB <- evodt$seed[evo_budgetMask]
+
+        compareresults <- compareCoveredLines(patternA, seedsA, crlines, patternB, seedsB,crlinesByEvo, proj, showInvalid = showInvalid)
+
+
+        for (ri in 1:length(compareresults)) {
+          color_sign <- NULL
+          level <- NULL
+          r <- compareresults[ri]
+          if(ri == 1){
+            onlyA[[BINDEX]] = as.numeric(r)
+            if(as.numeric(r) > as.numeric(compareresults[3])){
+              color_sign <- FALSE
+            }
           }
-        }
-        if(ri == 2){
-          both[[BINDEX]] = as.numeric(r)
-        }
-        if(ri == 3){
-          onlyB[[BINDEX]] = as.numeric(r)
-          if(as.numeric(r) > as.numeric(compareresults[1]))
-            color_sign <- TRUE
-        }
-        
-        if(!is.null(color_sign)){
-          if(as.numeric(r) > 50)
-            level <- HighestLevel
-          else if(as.numeric(r) > 33.3)
-            level <- MedianLevel
-          else
-            level <- LowLevel
-        }
-        
-        cat(" & ", boolean_cellcolor(color_sign, level),r , "\\%", sep = "")
-      }
-      
-      
-      cat(" \\\\ \n")
-      
-    }
-    
-    
-  }
-  
-  cat("\\midrule \n")
-  
-  cat("Sum & &", sumtests, "& & & & & \\\\ \n", sep = "")
-  cat("Mean & &")
-  
-  # cat(" & ")
-  # cat(formatC(mean(avgSeededLines), digits = 1, format = "f"),"", sep = "")
-  cat(" & ")
-  cat(formatC(mean(avgCrLines), digits = 1, format = "f"),"", sep = "")
+          if(ri == 2){
+            both[[BINDEX]] = as.numeric(r)
+          }
+          if(ri == 3){
+            onlyB[[BINDEX]] = as.numeric(r)
+            if(as.numeric(r) > as.numeric(compareresults[1]))
+              color_sign <- TRUE
+          }
 
-  cat(" & ")
-  meanadditional <- mean(avgCrLinesByEvo)
-  prefixadditinoal <- ""
-  if(meanadditional > 0)
-    prefixadditinoal <- "+"
-  cat(prefixadditinoal, formatC(meanadditional, digits = 1, format = "f"),"", sep = "")
-  
-  cat(" & ")
-  cat(formatC(mean(onlyA), digits = 1, format = "f"),"\\%", sep = "")
-  
-  cat(" & ")
-  cat(formatC(mean(both), digits = 1, format = "f"),"\\%", sep = "")
-  
-  cat(" & ")
-  cat(formatC(mean(onlyB), digits = 1, format = "f"),"\\%", sep = "")
-  
-  cat(" \\\\ \n")
-  
-  cat("\\midrule \n")
-  cat("\\multicolumn{4}{r}{\\# Relative > 0}",
-      " & ", length(avgCrLinesByEvo[avgCrLinesByEvo > 0]) , " &  &  &  \\\\ \n", sep = "")
-  
-  
-  cat("\\midrule \n")
-  
-  cat("\\multicolumn{4}{r}{Analysis with Ratio}",
-      " & Total & (0, 33.3\\%] & (33.3\\%, 50\\%] & (50, 100\\%] \\\\ \n", sep = "")
-  
-  cat("\\multicolumn{4}{r}{\\# Ratio\\textsubscript{EETests} $>$ Ratio\\textsubscript{Base}}",
-      " & ", length(onlyA[onlyA > onlyB]), 
-      " & ", boolean_cellcolor(FALSE, LowLevel),length(onlyA[onlyA > onlyB & onlyA <= 33.3]), 
-      " & ",boolean_cellcolor(FALSE, MedianLevel),length(onlyA[onlyA > onlyB & onlyA > 33.3 & onlyA <= 50]),
-      " & ",boolean_cellcolor(FALSE, HighestLevel),length(onlyA[onlyA > onlyB & onlyA > 50]),
-      "\\\\ \n", sep = "")
-  
-  cat("\\multicolumn{4}{r}{\\# Ratio\\textsubscript{Base} $>$ Ratio\\textsubscript{EETests}}",
-      " & ",  length(onlyB[onlyB > onlyA]), 
-      " & ",boolean_cellcolor(TRUE, LowLevel), length(onlyB[onlyB > onlyA & onlyB <= 33.3]), 
-      " & ",boolean_cellcolor(TRUE, MedianLevel),length(onlyB[onlyB > onlyA & onlyB > 33.3 & onlyB <= 50]),
-      " & ",boolean_cellcolor(TRUE, HighestLevel),length(onlyB[onlyB > onlyA & onlyB > 50]),
-      "\\\\ \n", sep = "")
-  
-  cat("\\bottomrule \n")
-  cat("\\end{tabular} \n")
-  
-  sink()
+          if(!is.null(color_sign)){
+            if(as.numeric(r) > 50)
+              level <- HighestLevel
+            else if(as.numeric(r) > 33.3)
+              level <- MedianLevel
+            else
+              level <- LowLevel
+          }
+
+          cat(" & ", boolean_cellcolor(color_sign, level),r , "\\%", sep = "")
+        }
+
+
+        cat(" \\\\ \n")
+
+      }
+
+
+    }
+
+    cat("\\midrule \n")
+
+    cat("Sum & &", sumtests, " (",sumtestswithmock,", ",formatC(100*sumtestswithmock/sumtests, digits = 1, format = "f"),"\\%) & & & & & \\\\ \n", sep = "")
+    cat("Mean & &")
+
+    cat(" & ")
+    cat(formatC(mean(avgCrLines), digits = 1, format = "f"),"", sep = "")
+
+    cat(" & ")
+    meanadditional <- mean(avgCrLinesByEvo)
+    prefixadditinoal <- ""
+    if(meanadditional > 0)
+      prefixadditinoal <- "+"
+    cat(prefixadditinoal, formatC(meanadditional, digits = 1, format = "f"),"", sep = "")
+
+    cat(" & ")
+    cat(formatC(mean(onlyA), digits = 1, format = "f"),"\\%", sep = "")
+
+    cat(" & ")
+    cat(formatC(mean(both), digits = 1, format = "f"),"\\%", sep = "")
+
+    cat(" & ")
+    cat(formatC(mean(onlyB), digits = 1, format = "f"),"\\%", sep = "")
+
+    cat(" \\\\ \n")
+
+
+    multic <- 4
+    cat("\\midrule \n")
+
+
+    cat("\\multicolumn{",multic,"}{r}{Analysis with Ratio}",
+        " & Total & (0, 33.3\\%] & (33.3\\%, 50\\%] & (50, 100\\%] \\\\ \n", sep = "")
+
+    cat("\\multicolumn{",multic,"}{r}{\\# Ratio\\textsubscript{EETests} $>$ Ratio\\textsubscript{Base}}",
+        " & ", length(onlyA[onlyA > onlyB]),
+        " & ", boolean_cellcolor(FALSE, LowLevel),length(onlyA[onlyA > onlyB & onlyA <= 33.3]),
+        " & ",boolean_cellcolor(FALSE, MedianLevel),length(onlyA[onlyA > onlyB & onlyA > 33.3 & onlyA <= 50]),
+        " & ",boolean_cellcolor(FALSE, HighestLevel),length(onlyA[onlyA > onlyB & onlyA > 50]),
+        "\\\\ \n", sep = "")
+
+    cat("\\multicolumn{",multic,"}{r}{\\# Ratio\\textsubscript{Base} $>$ Ratio\\textsubscript{EETests}}",
+        " & ",  length(onlyB[onlyB > onlyA]),
+        " & ",boolean_cellcolor(TRUE, LowLevel), length(onlyB[onlyB > onlyA & onlyB <= 33.3]),
+        " & ",boolean_cellcolor(TRUE, MedianLevel),length(onlyB[onlyB > onlyA & onlyB > 33.3 & onlyB <= 50]),
+        " & ",boolean_cellcolor(TRUE, HighestLevel),length(onlyB[onlyB > onlyA & onlyB > 50]),
+        "\\\\ \n", sep = "")
+
+    cat("\\bottomrule \n")
+    cat("\\end{tabular} \n")
+
+    sink()
 }
 
 
@@ -1440,7 +1448,7 @@ compareMetricsShowRelativeAndA12WithAMean <- function(dta, maskIda, maskIdaName1
         #" & ",
         " \\\\ \n",sep = "")
     
-    cat("\\multicolumn{",col_num+1,"}{l}{\\#\\emph{Seeded} $\\succ$ \\emph{Base}}",
+    cat("\\multicolumn{",col_num+1,"}{l}{\\#\\seeded $\\succ$ \\emph{Base}}",
         # " & ",
         " & ", length(a12line[a12line > 0.5 & pline < 0.05]) ,
         " & ",
@@ -1451,7 +1459,7 @@ compareMetricsShowRelativeAndA12WithAMean <- function(dta, maskIda, maskIdaName1
         " & ", length(a12fault[a12fault > 0.5 & pfault < 0.05]) ,
         " \\\\ \n",sep = "")
     
-    cat("\\multicolumn{",col_num+1,"}{l}{\\#\\emph{Base} $\\succ$ \\emph{Seeded}}",
+    cat("\\multicolumn{",col_num+1,"}{l}{\\#\\emph{Base} $\\succ$ \\seeded}",
         #" & ",
         " & ", length(a12line[a12line < 0.5 & pline < 0.05]) ,
         " & ",
@@ -2150,7 +2158,7 @@ analyzeAll <- function(anonymized = TRUE, showInvalid = TRUE){
   enable_seed_mask = dt$seedTestCases == "true" & dt$maxTime == "1h"
   seededsubdt <- subset(dt, enable_seed_mask)
   coverageTableWithMask(seededsubdt, "enabled_seeds", FALSE, TRUE, anonymized)
-  compareMetricsShowRelativeAndA12WithAMean(seededsubdt,"seeded_1h", "","Mean", basesubdt, "base_1h", anonymized, compareIdName = "Seeded vs. Base", 
+  compareMetricsShowRelativeAndA12WithAMean(seededsubdt,"seeded_1h", "","Mean", basesubdt, "base_1h", anonymized, compareIdName = "\\seeded vs. Base",
                                             reverseCompare = FALSE,showAdditionalSummary = TRUE, showComparsionColumn= FALSE, showType = FALSE, showSeedingBudget = TRUE)
   
   # RQ4
@@ -2172,9 +2180,9 @@ analyzeAll <- function(anonymized = TRUE, showInvalid = TRUE){
                             based10hsubdt, "base_10h", "","Mean", TRUE, # base 10h
                             seededsubdt, "seeded_1h",  # seed 1h
                             basesubdt, "base_1h", # base 1h
-                            "\\textbf{Mean of Seeded 10h; Seeded 10h vs. Seeded 1h}",
+                            "\\textbf{Mean of \\seeded 10h; \\seeded 10h vs. \\seeded 1h}",
                             "\\textbf{Mean of Base 10h; Base 10h vs. Base 1h}",
-                            "\\textbf{Seeded 10h vs. Base 10h}",
+                            "\\textbf{\\seeded 10h vs. Base 10h}",
                             anonymized)
   
 }

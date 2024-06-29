@@ -17,10 +17,13 @@ Note that all confidential info (such as package path, class name) related to en
 
 Our implementation for supporting seeding and mocking has been integrated into EvoMaster v2.0.
 
-To enable seeding and mocking, user can implement following three method by extending `EmbeddedSutController` or `ExternalSutController`
-* `List<SeededRPCTestDto> seedRPCTests()`: set seeded tests with `SeededRPCTestDto`;
-* `boolean customizeMockingRPCExternalService(List<MockRPCExternalServiceDto> externalServiceDtos, boolean enabled)`: employ in-house developed techniques for mocking external services;
-* `boolean customizeMockingDatabase(List<MockDatabaseDto> databaseDtos, boolean enabled)`: employ in-house developed techniques for mocking databases;
+To enable seeding and mocking, user can 
+
+* define seeded tests with [SeededRPCTestDto](https://github.com/WebFuzzing/EvoMaster/blob/master/client-java/controller-api/src/main/java/org/evomaster/client/java/controller/api/dto/problem/rpc/SeededRPCTestDto.java);
+* and implement following three method by extending `EmbeddedSutController` or `ExternalSutController`:
+  * `List<SeededRPCTestDto> seedRPCTests()`: set seeded tests ;
+  * `boolean customizeMockingRPCExternalService(List<MockRPCExternalServiceDto> externalServiceDtos, boolean enabled)`: employ in-house developed techniques for mocking external services;
+  * `boolean customizeMockingDatabase(List<MockDatabaseDto> databaseDtos, boolean enabled)`: employ in-house developed techniques for mocking databases;
 
 As EvoMaster is open-source, all info can be found online, eg, [evomaster webpage](https://www.evomaster.org), [evomaster v2.0](https://github.com/EMResearch/EvoMaster/releases/tag/v2.0.0).
 
